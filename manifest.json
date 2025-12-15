@@ -1,0 +1,21 @@
+{
+  "name": "SeismoGuard Pro",
+  "short_name": "SeismoGuard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e1e2e",
+  "theme_color": "#1e1e2e",
+  "description": "Küresel Sismik İzleme Ağı",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1088/10818537.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1088/1088537.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SeismoGuard Pro v0.7 beta</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="font-medium">
+
+    <div id="map"></div>
+
+    <!-- BAŞLANGIÇ EKRANI -->
+    <div id="start-screen">
+        <div class="start-content">
+            <svg class="logo-icon big-logo" viewBox="0 0 100 100">
+                <circle class="logo-ring ring-1" cx="50" cy="50" r="40"/>
+                <circle class="logo-ring ring-2" cx="50" cy="50" r="30"/>
+                <circle class="logo-core" cx="50" cy="50" r="15"/>
+                <path class="logo-pulse" d="M10,50 L30,50 L40,20 L50,80 L60,40 L70,50 L90,50" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h1>SEISMO<span>GUARD</span></h1>
+            <p>Küresel Sismik İzleme Ağı</p>
+            <button class="btn-start" id="init-btn">SİSTEMİ BAŞLAT</button>
+            <div class="version-tag">v0.7 beta</div>
+        </div>
+    </div>
+
+    <!-- ARAYÜZ KATMANI -->
+    <div class="ui-layer">
+        
+        <!-- HEADER -->
+        <header>
+            <div class="logo-container" id="app-logo">
+                <svg class="logo-icon header-logo" viewBox="0 0 100 100">
+                    <circle class="logo-ring ring-1" cx="50" cy="50" r="40"/>
+                    <circle class="logo-core" cx="50" cy="50" r="20"/>
+                    <path class="logo-pulse header-pulse" d="M10,50 L30,50 L40,20 L50,80 L60,40 L70,50 L90,50" fill="none" stroke-width="6" stroke-linecap="round"/>
+                </svg>
+                <div class="app-name">SEISMO<span>GUARD</span></div>
+            </div>
+            <div class="header-right">
+                <div class="stats-ticker" id="stats-ticker">
+                    <div class="stat-item"><i class="fas fa-chart-line"></i> <span id="stat-max" class="stat-val stat-high">0.0</span></div>
+                    <div class="stat-item" style="border-left:1px solid #444; padding-left:10px"><i class="fas fa-globe"></i> <span id="stat-count" class="stat-val">0</span></div>
+                </div>
+                <button id="filter-btn" class="icon-btn" aria-label="Filtrele"><i class="fas fa-filter"></i></button>
+                <button id="settings-btn" class="icon-btn" aria-label="Ayarlar"><i class="fas fa-cog"></i></button>
+            </div>
+        </header>
+
+        <!-- SOLAR POPUP -->
+        <div id="solar-popup">
+            <div class="popup-header">YEREL VERİLER</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span id="sol-coords">--</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-sun warning-color"></i>
+                    <span id="sol-rise">--:--</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-moon purple-color"></i>
+                    <span id="sol-set">--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FİLTRE MODALI (YENİ) -->
+        <div id="filter-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>FİLTRELEME</h3>
+                    <button id="close-filter" class="icon-btn" aria-label="Kapat"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="setting-group">
+                    <label>ZAMAN ARALIĞI</label>
+                    <div class="btn-group" id="time-filter-group">
+                        <button class="btn-option active" data-val="24">24 Saat</button>
+                        <button class="btn-option" data-val="12">12 Saat</button>
+                        <button class="btn-option" data-val="1">1 Saat</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>MİNİMUM BÜYÜKLÜK</label>
+                    <div class="btn-group" id="mag-filter-group">
+                        <button class="btn-option active" data-val="0">Tümü</button>
+                        <button class="btn-option" data-val="3">3.0+</button>
+                        <button class="btn-option" data-val="5">5.0+</button>
+                    </div>
+                </div>
+
+                <div class="control-box" style="margin-top:15px; background:transparent; border:none; padding:0;">
+                    <div class="range-header">
+                        <span><i class="fas fa-radar"></i> Tarama Menzili</span>
+                        <span id="range-val-modal">500 km</span>
+                    </div>
+                    <input type="range" id="radius-slider-modal" min="50" max="5000" step="50" value="500">
+                </div>
+
+                <button id="apply-filter-btn" class="btn-danger full-width" style="background:var(--primary); color:black;">UYGULA</button>
+            </div>
+        </div>
+
+        <!-- AYARLAR MODALI -->
+        <div id="settings-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>SİSTEM AYARLARI</h3>
+                    <button id="close-settings" class="icon-btn" aria-label="Kapat"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="setting-group">
+                    <label>TEMA</label>
+                    <div class="btn-group" id="theme-group">
+                        <button class="btn-option" data-val="light" aria-label="Açık Tema"><i class="fas fa-sun"></i></button>
+                        <button class="btn-option" data-val="dark" aria-label="Koyu Tema"><i class="fas fa-moon"></i></button>
+                        <button class="btn-option active" data-val="system">SİSTEM</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>HARİTA KATMANI</label>
+                    <div class="btn-group" id="layer-group">
+                        <button class="btn-option active" data-val="dark">Normal</button>
+                        <button class="btn-option" data-val="satellite">Uydu</button>
+                    </div>
+                </div>
+
+                <button id="test-alarm-btn" class="btn-danger full-width">DEPREM SİMÜLASYONU</button>
+
+                <div class="modal-version">v0.7 beta</div>
+
+                <div class="modal-footer">
+                    <a href="#" id="kvkk-btn">KVKK</a>
+                    <a href="#" id="gdpr-btn">GDPR</a>
+                    <a href="#" id="about-btn">Hakkında</a>
+                    <a href="#" id="changelog-btn">Yenilikler</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- BİLGİ MODALLARI -->
+        <div id="changelog-modal" class="modal-overlay text-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Yenilikler</h3>
+                    <button id="close-changelog-btn" class="icon-btn close-text-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="text-content">
+                    <div class="changelog-entry">
+                        <div class="changelog-header">
+                            <span class="changelog-version">v0.7 beta</span>
+                            <span class="changelog-date">5 Aralık 2025</span>
+                        </div>
+                        <ul class="changelog-list">
+                            <li>P ve S Dalgaları için çift animasyon simülasyonu eklendi.</li>
+                            <li>Gelişmiş filtreleme menüsü eklendi.</li>
+                            <li>Kritik Alarm Modu (Otomatik arayüz değişimi).</li>
+                            <li>Radar tarama efekti ve Sismik Analiz iyileştirildi.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="kvkk-modal" class="modal-overlay text-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>KVKK Bilgilendirmesi</h3>
+                    <button id="close-kvkk-btn" class="icon-btn close-text-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="text-content">
+                    <p>Bu uygulama, ayarlarınızı tarayıcınızda çerez olarak saklar. Konum veriniz sadece size yakın depremleri göstermek için kullanılır.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="gdpr-modal" class="modal-overlay text-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>GDPR Information</h3>
+                    <button id="close-gdpr-btn" class="icon-btn close-text-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="text-content">
+                    <p>Local processing of location data. No external server storage.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="about-modal" class="modal-overlay text-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Hakkında</h3>
+                    <button id="close-about-btn" class="icon-btn close-text-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="text-content">
+                    <p>SeismoGuard v0.7 beta. Kandilli, USGS ve EMSC verilerini kullanır.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HARİTA KONTROLLERİ (GİZLİ - ARTIK MODALDA) -->
+        <div id="map-controls-container" style="display:none;">
+            <!-- Eski sliderlar buradaydı, artık modal içinde -->
+        </div>
+
+        <!-- ALT PANEL (LİSTE) -->
+        <div id="info-panel"> 
+            <div class="panel-handle" id="toggle-panel-btn">
+                <div class="handle-bar"></div>
+                <span class="panel-title"><i class="fas fa-stream"></i> SON AKTİVİTELER</span>
+                <i class="fas fa-chevron-down" id="panel-chevron"></i>
+            </div>
+            <div id="log-list-container">
+                <div id="skeleton-loader" class="skeleton-loader">
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                </div>
+                <div id="log-list">
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAY PANELİ (BOTTOM SHEET) -->
+        <div id="detail-panel" class="bottom-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-content">
+                <div class="sheet-header">
+                    <h2 id="detail-loc">Yer</h2>
+                    <button id="close-detail" class="icon-btn" aria-label="Kapat"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="detail-grid">
+                    <div class="d-item">
+                        <div class="d-label">Büyüklük</div>
+                        <div class="d-val mag-val" id="detail-mag">0.0</div>
+                    </div>
+                    <div class="d-item">
+                        <div class="d-label">Derinlik</div>
+                        <div class="d-val" id="detail-depth">0 km</div>
+                    </div>
+                    <div class="d-item">
+                        <div class="d-label">Tarih</div>
+                        <div class="d-val" id="detail-time">--:--</div>
+                    </div>
+                </div>
+                <div class="sheet-actions">
+                    <button id="share-btn" class="action-btn"><i class="fas fa-share-alt"></i> Paylaş</button>
+                    <button id="gmaps-btn" class="action-btn outline"><i class="fas fa-map-marked-alt"></i> Google Maps</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAB BUTONLAR -->
+        <button id="recenter-btn" class="fab-btn" aria-label="Konuma Git"><i class="fas fa-crosshairs"></i></button>
+        
+        <button id="felt-btn" class="felt-btn">
+            <div class="felt-icon"><i class="fas fa-house-damage"></i></div>
+            <span>SALLANIYORUM</span>
+        </button>
+
+        <!-- ALARM OVERLAY -->
+        <div id="alarm-overlay">
+            <div class="alarm-box">
+                <i class="fas fa-radiation alarm-icon"></i>
+                <h2>DEPREM UYARISI</h2>
+                <div class="alarm-data">
+                    <span id="alarm-mag">0.0</span>
+                </div>
+                <div id="alarm-loc">Bölge Hesaplanıyor...</div>
+                <div class="alarm-meta">
+                    <span id="alarm-dist">Mesafe: -- km</span>
+                </div>
+                <button class="btn-outline" onclick="stopAlarm()">ALARM'I DURDUR</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
